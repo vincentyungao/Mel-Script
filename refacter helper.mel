@@ -1,0 +1,115 @@
+
+/********************************************\
+   HN2 Outfits Refactor Helper
+   ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯
+   Version    0.5
+
+\********************************************/
+
+global proc RefactorHelperUI() {
+    if (`window -exists RefactorHelperUI` == 1) deleteUI RefactorHelperUI;
+    
+    window 
+        -resizeToFitChildren 1 
+        -title "Refactor Helper" RefactorHelperUI;
+    
+    columnLayout 
+        -adjustableColumn true;
+    
+    frameLayout 
+        -collapsable true 
+        -lv false 
+        -bs "etchedOut";
+        
+        //Combine intro
+            columnLayout; 	 
+                text 
+                    -label "1. Select the outfit (选择衣服模型)";
+                text 
+                    -label "2. Additive select the body mesh (加选身体模型)";
+                text 
+                    -label "3. Click \"Combine\" below (点击下面的\"Combine\")";
+                setParent ..;
+            setParent ..;
+    button 
+        -label "Combine" 
+        -command ("CombineSkinnedMeshs ()");
+        
+    frameLayout 
+        -collapsable true 
+        -lv false 
+        -bs "etchedOut";
+        
+        //Copy weight intro
+            columnLayout; 	 
+                text 
+                    -label "1. Select the outfit and body (选择衣服和身体模型)";
+                text 
+                    -label "2. Additive select the combined mesh (加选合并后的模型)";
+                text 
+                    -label "3. Click \"Copy Weight\" below (点击下面的\"Copy Weight\")";
+                setParent ..;
+            setParent ..;
+    button 
+        -label "Copy Weight" 
+        -command ("CopyWeight()");
+    button 
+        -label "Close" 
+        -command "deleteUI RefactorHelperUI";
+    text 
+        -label "\nVer. 0.5\n©2013 Happylatte\n";
+        
+    showWindow;
+}
+
+global proc CombineSkinnedMeshs () {
+    //list all the selected objects
+    string $sel[] = `ls -sl`;
+    string $outfitName = $sel[0];
+    print ("Outfit name: " + $outfitName + ".\n");
+
+    //duplicate selected objects
+    string $dup[] = `duplicate -rr`;
+    print ("duplicated objects: " + $dup[0] + ".\n");
+    
+    //combine duplicated objects
+    string $comb[] = `polyUnite -ch 1 -mergeUVSets 1 $dup`;
+    print ("combined object: " + $comb[0] + ".\n");    
+    
+    //clean combined object histories
+    DeleteHistory;
+    select $dup;
+    delete
+    delete $sel[1];
+    
+    //rename
+    rename $sel[0] ($outfitName + "_old");
+    rename $comb[0] $outfitName;
+}
+   
+    
+global proc CopyWeight() {
+    //
+    string $sel[] = `ls -sl`;
+ 
+    //bindSkin
+    select $sel[2];
+    if(`objExists g_Root`){
+        select -add g_Root;
+        skinCluster -dr 4 -mi 4 g_Root $sel[2];
+    }
+    else if(`objExists g_root`){
+        select -add g_root;
+        skinCluster -dr 4 -mi 4 g_root $sel[2];
+    }
+    else error "no joint named \"g_root\" or \"g_Root\"";
+    
+    
+    //copy skin weight
+    select $sel;
+    //select -d $comb[0];
+    copySkinWeights  -nm -sa closestPoint -ia closestJoint;
+}
+
+
+RefactorHelperUI();
